@@ -1,0 +1,5 @@
+[2026-06-28T17:20:57.077Z] Iniciando reporte semanal MySQL...
+[2026-06-28T17:20:57.082Z] Credenciales leídas de: C:/Users/InversionesWildaga/Documents/Claude-Cowork-Scripts/mysql_config.json
+[2026-06-28T17:20:57.297Z] REPORTE_OK — full_scans:10 sin_uso:21 buffer:0.48GB/2.00GB
+[2026-06-28T17:20:57.297Z] Salida guardada en: C:\Users\InversionesWildaga\Documents\MyNode\mysql-weekly-report\output\reporte-2026-06-28.html
+[2026-06-28T17:20:57.298Z] (también actualizado: C:\Users\InversionesWildaga\Documents\MyNode\mysql-weekly-report\output\reporte_ultimo.html)

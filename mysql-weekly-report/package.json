@@ -1,0 +1,12 @@
+{
+  "name": "mysql-weekly-report",
+  "version": "1.0.0",
+  "description": "Reporte semanal de salud del schema MySQL bdinv, guardado como HTML local para revisión",
+  "main": "report.js",
+  "scripts": {
+    "start": "node report.js"
+  },
+  "dependencies": {
+    "mysql2": "^3.11.3"
+  }
+}

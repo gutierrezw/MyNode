@@ -1,6 +1,6 @@
 const express = require("express");
 const rateLimit = require("express-rate-limit");
-const config = require("./config.json");
+const config = require("C:/Users/InversionesWildaga/Documents/Claude-Cowork-Scripts/mysql_config.json");
 const { requireApiKey } = require("./auth");
 const dbRoutes = require("./routes/db");
 

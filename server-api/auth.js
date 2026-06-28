@@ -1,4 +1,4 @@
-const config = require("./config.json");
+const config = require("C:/Users/InversionesWildaga/Documents/Claude-Cowork-Scripts/mysql_config.json");
 
 function requireApiKey(req, res, next) {
     const key = req.headers["x-api-key"];
