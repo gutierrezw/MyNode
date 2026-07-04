@@ -87,6 +87,11 @@ router.get("/ping", (req, res) => {
   res.json({ ok: true });
 });
 
+// ── GET /tv/ping-status — Python consulta si el panel TV está conectado ───────
+router.get("/ping-status", (req, res) => {
+  res.json(state.ping);
+});
+
 // ── GET /tv/contexto ──────────────────────────────────────────────────────────
 router.get("/contexto", (req, res) => {
   res.json(state.contexto);
