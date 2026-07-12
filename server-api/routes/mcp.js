@@ -6,6 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const pool = require("../db");
 const tvRoutes = require("./tv");
+const { getSchemaHealth, getSlowQueries } = require("../lib/schemaHealth");
 
 const router = express.Router();
 
@@ -250,6 +251,44 @@ function createMcpServer() {
                 return okContent(status);
             } catch (e) {
                 audit("get_agent_status", {}, null, e);
+                return errContent(`Error: ${e.message}`);
+            }
+        }
+    );
+
+    // ── get_schema_health ──────────────────────────────────────────────────────
+    server.tool(
+        "get_schema_health",
+        "Salud del schema MySQL: tamaño de tablas, índices sin uso, queries con full scan, uso de buffer pool InnoDB vs configurado.",
+        {},
+        async () => {
+            try {
+                const health = await getSchemaHealth(pool);
+                audit("get_schema_health", {}, `${health.tablas.length} tablas`);
+                return okContent(health);
+            } catch (e) {
+                audit("get_schema_health", {}, null, e);
+                return errContent(`Error: ${e.message}`);
+            }
+        }
+    );
+
+    // ── get_slow_queries ───────────────────────────────────────────────────────
+    server.tool(
+        "get_slow_queries",
+        "Queries lentas del performance_schema, filtrables por tabla, tiempo promedio mínimo (segundos) y cantidad de resultados.",
+        {
+            table: z.string().optional().describe("Filtra queries que mencionen esta tabla (ej: fund_holdings)"),
+            minSeconds: z.number().min(0).optional().describe("Tiempo promedio mínimo en segundos. Default: 0 (todas)."),
+            limit: z.number().int().min(1).max(100).optional().describe("Máx resultados (default: 20)"),
+        },
+        async ({ table, minSeconds, limit }) => {
+            try {
+                const rows = await getSlowQueries(pool, { table, minSeconds, limit });
+                audit("get_slow_queries", { table, minSeconds, limit }, `${rows.length} rows`);
+                return okContent({ count: rows.length, data: rows });
+            } catch (e) {
+                audit("get_slow_queries", { table, minSeconds, limit }, null, e);
                 return errContent(`Error: ${e.message}`);
             }
         }

@@ -2,3 +2,7 @@ node_modules/
 output/
 logs/
 *.log
+
+# OAuth runtime state — tokens activos y secrets de clientes
+server-api/oauth_tokens.json
+server-api/oauth_clients.json

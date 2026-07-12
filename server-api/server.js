@@ -5,6 +5,7 @@ const { requireApiKey } = require("./auth");
 const dbRoutes = require("./routes/db");
 const tvRoutes = require("./routes/tv");
 const mcpRoutes = require("./routes/mcp");
+const { router: oauthRouter } = require("./routes/oauth");
 
 const app = express();
 app.use(express.json());
@@ -18,6 +19,21 @@ const limiter = rateLimit({
 app.get("/health", (req, res) => {
     res.json({ status: "ok", version: "1.0.0", uptime: process.uptime() });
 });
+
+app.get("/.well-known/oauth-authorization-server", (req, res) => {
+    const base = "https://api-main.wildaga.com";
+    res.json({
+        issuer: base,
+        authorization_endpoint: `${base}/oauth/authorize`,
+        token_endpoint: `${base}/oauth/token`,
+        response_types_supported: ["code"],
+        grant_types_supported: ["authorization_code"],
+        code_challenge_methods_supported: ["S256"],
+        token_endpoint_auth_methods_supported: ["client_secret_post", "none"],
+    });
+});
+
+app.use("/oauth", oauthRouter);
 
 app.use("/db", requireApiKey, dbRoutes);
 
