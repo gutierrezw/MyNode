@@ -104,4 +104,16 @@ router.post("/:tipo/:id/proponer", async (req, res) => {
     }
 });
 
+// ── POST /:tipo/:id/descartar — cierra un hallazgo "no reproducido" sin confirmar fix (distinto
+//    de /resolver: no afirma que se corrigió, solo destapa la cola; reaparece fresco si recurre) ──
+router.post("/:tipo/:id/descartar", async (req, res) => {
+    const { nota } = req.body || {};
+    try {
+        await ReportManager.marcarDescartado(pool, req.params.id, nota);
+        res.json({ ok: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 module.exports = router;

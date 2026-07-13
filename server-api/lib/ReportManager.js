@@ -75,6 +75,15 @@ async function marcarPropuesto(pool, id) {
     await pool.query(`UPDATE reportes_historial SET estado = 'propuesto' WHERE id = ?`, [id]);
 }
 
+async function marcarDescartado(pool, id, nota) {
+    await pool.query(
+        `UPDATE reportes_historial
+         SET estado = 'descartado', propuesta_correccion = ?, fecha_resolucion = NOW()
+         WHERE id = ?`,
+        [nota || null, id]
+    );
+}
+
 function parseReporte(row) {
     try {
         return { ...row, reporte: JSON.parse(row.reporte.toString("utf8")) };
@@ -83,4 +92,4 @@ function parseReporte(row) {
     }
 }
 
-module.exports = { registrar, ultimo, historico, marcarResuelto, marcarPropuesto };
+module.exports = { registrar, ultimo, historico, marcarResuelto, marcarPropuesto, marcarDescartado };

@@ -85,6 +85,21 @@ async function marcarResuelto(id, tipo, sugerido) {
     }
 }
 
+async function marcarDescartado(id, tipo, sugerido) {
+    const nota = prompt('Nota (opcional) — por qué se descarta sin confirmar un fix:', sugerido || '') || null;
+    if (!confirm('¿Descartar este hallazgo como no reproducido? No se marca como resuelto (no afirma que se corrigió) — solo se saca de la cola. Si el pipeline lo vuelve a detectar, reaparece fresco.')) return;
+    const resp = await fetch('/reports/' + tipo + '/' + id + '/descartar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nota }),
+    });
+    if (resp.ok) {
+        document.getElementById('fila-' + id).remove();
+    } else {
+        alert('Error al descartar');
+    }
+}
+
 async function marcarPropuesto(id, tipo, btn) {
     if (!confirm('¿Marcar este hallazgo como pendiente de análisis? No se ejecuta nada automáticamente — queda a la espera de revisarlo en una sesión de Code.')) return;
     const resp = await fetch('/reports/' + tipo + '/' + id + '/proponer', { method: 'POST' });
@@ -121,6 +136,9 @@ function renderFila(row) {
             ${row.estado === "propuesto"
                 ? `<button disabled>En análisis</button>`
                 : `<button onclick="marcarPropuesto(${row.id}, '${escapeHtml(row.tipo_reporte)}', this)">🔧 Proponer corrección</button>`}
+            ${row.no_reproducido
+                ? `<button onclick="marcarDescartado(${row.id}, '${escapeHtml(row.tipo_reporte)}', '${sugerido.replace(/'/g, "\\'")}')">Descartar (no reprodujo)</button>`
+                : ""}
             <button onclick="marcarResuelto(${row.id}, '${escapeHtml(row.tipo_reporte)}', '${sugerido.replace(/'/g, "\\'")}')">Marcar resuelto</button>
         </td>
     </tr>`;
