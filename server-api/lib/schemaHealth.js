@@ -1,5 +1,13 @@
 const config = require("C:/Users/InversionesWildaga/Documents/Claude-Cowork-Scripts/mysql_config.json");
 
+// Índices verificados manualmente como en uso real (EXPLAIN + grep de código), que muestran 0 lecturas
+// solo porque performance_schema se resetea (reinicio de MySQL o botón "Reiniciar estadísticas") y el
+// query path que los usa no es de alta frecuencia. Revisado 2026-07-13.
+const INDICES_USO_VERIFICADO = [
+    { tabla: "market", indice: "idx_market_account_symbol" }, // Modulos_Mysql.py:1568 WHERE account+symbol
+    { tabla: "market", indice: "idx_market_ACCOUNT_tipo" }, // Modulos_Mysql.py:1580 WHERE account+tipo
+];
+
 async function getSchemaHealth(pool) {
     const dbName = config.db.database;
 
@@ -14,7 +22,7 @@ async function getSchemaHealth(pool) {
         [dbName]
     );
 
-    const [indices_sin_uso] = await pool.query(
+    const [indices_sin_uso_raw] = await pool.query(
         `SELECT t.object_name AS tabla, t.index_name AS indice,
                 t.count_read AS lecturas, t.count_write AS escrituras
          FROM performance_schema.table_io_waits_summary_by_index_usage t
@@ -30,6 +38,9 @@ async function getSchemaHealth(pool) {
            )
          ORDER BY t.object_name`,
         [dbName]
+    );
+    const indices_sin_uso = indices_sin_uso_raw.filter(
+        (r) => !INDICES_USO_VERIFICADO.some((v) => v.tabla === r.tabla && v.indice === r.indice)
     );
 
     const [full_scans] = await pool.query(
