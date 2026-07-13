@@ -8,8 +8,14 @@ const INDICES_USO_VERIFICADO = [
     { tabla: "market", indice: "idx_market_ACCOUNT_tipo" }, // Modulos_Mysql.py:1580 WHERE account+tipo
 ];
 
+const UMBRAL_UPTIME_DIAS = 30; // no reportar indices_sin_uso si MySQL lleva corriendo menos que esto —
+// procesos de baja frecuencia (batch semanal/mensual) necesitan tiempo para dejar rastro en el contador
+
 async function getSchemaHealth(pool) {
     const dbName = config.db.database;
+
+    const [[uptimeRow]] = await pool.query("SHOW GLOBAL STATUS LIKE 'Uptime'");
+    const uptimeDias = Number(uptimeRow.Value) / 86400;
 
     const [tablas] = await pool.query(
         `SELECT TABLE_NAME AS tabla, TABLE_ROWS AS filas,
@@ -22,23 +28,26 @@ async function getSchemaHealth(pool) {
         [dbName]
     );
 
-    const [indices_sin_uso_raw] = await pool.query(
-        `SELECT t.object_name AS tabla, t.index_name AS indice,
-                t.count_read AS lecturas, t.count_write AS escrituras
-         FROM performance_schema.table_io_waits_summary_by_index_usage t
-         WHERE t.object_schema = ?
-           AND t.index_name IS NOT NULL AND t.index_name != 'PRIMARY'
-           AND t.count_read = 0 AND t.count_write = 0
-           AND NOT EXISTS (
-               SELECT 1 FROM information_schema.STATISTICS s
-               WHERE s.TABLE_SCHEMA = t.object_schema
-                 AND s.TABLE_NAME = t.object_name
-                 AND s.INDEX_NAME = t.index_name
-                 AND s.NON_UNIQUE = 0
-           )
-         ORDER BY t.object_name`,
-        [dbName]
-    );
+    let indices_sin_uso_raw = [];
+    if (uptimeDias >= UMBRAL_UPTIME_DIAS) {
+        [indices_sin_uso_raw] = await pool.query(
+            `SELECT t.object_name AS tabla, t.index_name AS indice,
+                    t.count_read AS lecturas, t.count_write AS escrituras
+             FROM performance_schema.table_io_waits_summary_by_index_usage t
+             WHERE t.object_schema = ?
+               AND t.index_name IS NOT NULL AND t.index_name != 'PRIMARY'
+               AND t.count_read = 0 AND t.count_write = 0
+               AND NOT EXISTS (
+                   SELECT 1 FROM information_schema.STATISTICS s
+                   WHERE s.TABLE_SCHEMA = t.object_schema
+                     AND s.TABLE_NAME = t.object_name
+                     AND s.INDEX_NAME = t.index_name
+                     AND s.NON_UNIQUE = 0
+               )
+             ORDER BY t.object_name`,
+            [dbName]
+        );
+    }
     const indices_sin_uso = indices_sin_uso_raw.filter(
         (r) => !INDICES_USO_VERIFICADO.some((v) => v.tabla === r.tabla && v.indice === r.indice)
     );
