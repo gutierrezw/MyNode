@@ -15,13 +15,20 @@ async function getSchemaHealth(pool) {
     );
 
     const [indices_sin_uso] = await pool.query(
-        `SELECT object_name AS tabla, index_name AS indice,
-                count_read AS lecturas, count_write AS escrituras
-         FROM performance_schema.table_io_waits_summary_by_index_usage
-         WHERE object_schema = ?
-           AND index_name IS NOT NULL AND index_name != 'PRIMARY'
-           AND count_read = 0 AND count_write = 0
-         ORDER BY object_name`,
+        `SELECT t.object_name AS tabla, t.index_name AS indice,
+                t.count_read AS lecturas, t.count_write AS escrituras
+         FROM performance_schema.table_io_waits_summary_by_index_usage t
+         WHERE t.object_schema = ?
+           AND t.index_name IS NOT NULL AND t.index_name != 'PRIMARY'
+           AND t.count_read = 0 AND t.count_write = 0
+           AND NOT EXISTS (
+               SELECT 1 FROM information_schema.STATISTICS s
+               WHERE s.TABLE_SCHEMA = t.object_schema
+                 AND s.TABLE_NAME = t.object_name
+                 AND s.INDEX_NAME = t.index_name
+                 AND s.NON_UNIQUE = 0
+           )
+         ORDER BY t.object_name`,
         [dbName]
     );
 
