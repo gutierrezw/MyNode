@@ -5,6 +5,7 @@ const { requireApiKey } = require("./auth");
 const dbRoutes = require("./routes/db");
 const tvRoutes = require("./routes/tv");
 const mcpRoutes = require("./routes/mcp");
+const reportsRoutes = require("./routes/reports");
 const { router: oauthRouter } = require("./routes/oauth");
 
 const app = express();
@@ -43,6 +44,10 @@ app.use("/db", requireApiKey, dbRoutes);
 app.use("/tv", limiter, tvRoutes);
 app.use("/internal", tvRoutes);
 app.use("/mcp", requireApiKey, mcpRoutes);
+
+// Report Center — GET /reports/:tipo (lectura, protegido por Cloudflare Access), POST /internal/reports/:tipo/run (trigger, Task Scheduler)
+app.use("/reports", reportsRoutes);
+app.use("/internal/reports", requireApiKey, reportsRoutes);
 
 app.use((req, res) => {
     res.status(404).json({ error: "Endpoint no encontrado" });

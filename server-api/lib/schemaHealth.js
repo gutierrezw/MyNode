@@ -27,8 +27,9 @@ async function getSchemaHealth(pool) {
 
     const [full_scans] = await pool.query(
         `SELECT SUBSTRING(digest_text,1,80) AS query_text,
+                query_sample_text,
                 count_star AS veces,
-                ROUND(avg_timer_wait/1000000000,2) AS avg_seg,
+                ROUND(avg_timer_wait/1000000000000,2) AS avg_seg,
                 sum_rows_examined AS filas_examinadas,
                 sum_no_index_used AS sin_indice
          FROM performance_schema.events_statements_summary_by_digest
@@ -65,8 +66,8 @@ async function getSchemaHealth(pool) {
 async function getSlowQueries(pool, { table, minSeconds = 0, limit = 20 } = {}) {
     let sql = `SELECT SUBSTRING(digest_text,1,120) AS query_text,
                       count_star AS veces,
-                      ROUND(avg_timer_wait/1000000000,3) AS avg_seg,
-                      ROUND(sum_timer_wait/1000000000,2) AS total_seg,
+                      ROUND(avg_timer_wait/1000000000000,3) AS avg_seg,
+                      ROUND(sum_timer_wait/1000000000000,2) AS total_seg,
                       sum_rows_examined AS filas_examinadas,
                       sum_no_index_used AS sin_indice
                FROM performance_schema.events_statements_summary_by_digest
@@ -78,7 +79,7 @@ async function getSlowQueries(pool, { table, minSeconds = 0, limit = 20 } = {}) 
         params.push(`%${table}%`);
     }
     if (minSeconds > 0) {
-        sql += " AND avg_timer_wait/1000000000 >= ?";
+        sql += " AND avg_timer_wait/1000000000000 >= ?";
         params.push(minSeconds);
     }
     sql += " ORDER BY avg_timer_wait DESC LIMIT ?";
