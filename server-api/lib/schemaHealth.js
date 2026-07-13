@@ -31,12 +31,14 @@ async function getSchemaHealth(pool) {
                 count_star AS veces,
                 ROUND(avg_timer_wait/1000000000000,2) AS avg_seg,
                 sum_rows_examined AS filas_examinadas,
+                ROUND(sum_rows_examined / count_star) AS filas_examinadas_prom,
                 sum_no_index_used AS sin_indice
          FROM performance_schema.events_statements_summary_by_digest
          WHERE digest_text NOT LIKE '%performance_schema%'
            AND digest_text NOT LIKE '%information_schema%'
            AND sum_no_index_used > 0
-         ORDER BY sum_rows_examined DESC
+           AND sum_rows_examined / count_star >= 10000000
+         ORDER BY filas_examinadas_prom DESC
          LIMIT 10`
     );
 
@@ -89,4 +91,8 @@ async function getSlowQueries(pool, { table, minSeconds = 0, limit = 20 } = {}) 
     return rows;
 }
 
-module.exports = { getSchemaHealth, getSlowQueries };
+async function resetStats(pool) {
+    await pool.query("TRUNCATE TABLE performance_schema.events_statements_summary_by_digest");
+}
+
+module.exports = { getSchemaHealth, getSlowQueries, resetStats };

@@ -34,6 +34,9 @@ function renderPage(tipo, rows) {
   .badge.ausente-tag { background: #1a2f1a; color: #3fb950; margin-left: 4px; }
   tr.row.ausente { opacity: 0.6; }
   .tablas { color: #79c0ff; font-family: monospace; font-size: 0.82rem; }
+  .id { color: #8b949e; font-family: monospace; font-size: 0.82rem; }
+  .num { font-family: monospace; font-size: 0.85rem; text-align: right; }
+  .num-alta { color: #f85149; font-weight: 700; }
   .ref { font-family: monospace; font-size: 0.82rem; color: #c9d1d9; max-width: 420px; overflow-wrap: anywhere; }
   details summary { cursor: pointer; color: #58a6ff; font-size: 0.82rem; }
   pre { background: #010409; border: 1px solid #21262d; border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 0.78rem; margin-top: 8px; }
@@ -51,11 +54,12 @@ function renderPage(tipo, rows) {
     <option value="">Todas las categorías</option>
     ${categorias.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("\n    ")}
   </select>
+  ${tipo === "schema_health" ? `<button onclick="reiniciarEstadisticas()" style="margin-left:8px;">🔄 Reiniciar estadísticas</button>` : ""}
 
   ${rows.length === 0 ? '<div class="vacio">Sin hallazgos activos.</div>' : `
   <table>
     <thead>
-      <tr><th>Categoría</th><th>Referencia</th><th>Tablas</th><th>Última corrida</th><th>Detalle</th><th>Acciones</th></tr>
+      <tr><th>ID</th><th>Categoría</th><th>Ejec.</th><th>Filas/ejec.</th><th>Referencia</th><th>Tablas</th><th>Última corrida</th><th>Detalle</th><th>Acciones</th></tr>
     </thead>
     <tbody id="tbody">
       ${filas}
@@ -115,6 +119,16 @@ async function marcarPropuesto(id, tipo, btn) {
 function copiarReferencia(texto) {
     navigator.clipboard.writeText(texto);
 }
+
+async function reiniciarEstadisticas() {
+    if (!confirm('¿Reiniciar estadísticas de performance_schema? Esto borra las estadísticas acumuladas de TODAS las queries (no solo una) — sirve para arrancar una medición limpia al validar un fix puntual. Queries pesadas pero poco frecuentes (ej. batch 13F) no van a reaparecer en los reportes hasta que vuelvan a ejecutarse.')) return;
+    const resp = await fetch('/reports/schema_health/reset-stats', { method: 'POST' });
+    if (resp.ok) {
+        alert('Estadísticas reiniciadas. Los próximos reportes reflejan datos desde ahora.');
+    } else {
+        alert('Error al reiniciar estadísticas');
+    }
+}
 </script>
 </body>
 </html>`;
@@ -125,8 +139,14 @@ function renderFila(row) {
     const sugerido = row.no_reproducido
         ? `No reprodujo en la corrida más reciente (última vez visto: ${new Date(row.fecha_ejecucion).toLocaleString("es-AR")})`
         : "";
+    const reporte = row.reporte && typeof row.reporte === "object" ? row.reporte : {};
+    const ejecuciones = reporte.veces ?? null;
+    const filasPorEjec = reporte.filas_examinadas_prom ?? reporte.filas_examinadas ?? reporte.filas ?? null;
     return `<tr class="row ${row.no_reproducido ? "ausente" : ""}" id="fila-${row.id}" data-categoria="${escapeHtml(row.categoria)}">
+        <td class="id">#${row.id}</td>
         <td><span class="badge ${escapeHtml(row.estado)}">${escapeHtml(row.categoria)}</span>${row.no_reproducido ? '<span class="badge ausente-tag">no reproducido</span>' : ""}</td>
+        <td class="num">${ejecuciones !== null ? ejecuciones.toLocaleString("es-AR") : "—"}</td>
+        <td class="num ${filasPorEjec !== null && filasPorEjec >= 1000000 ? "num-alta" : ""}">${filasPorEjec !== null ? filasPorEjec.toLocaleString("es-AR") : "—"}</td>
         <td class="ref">${escapeHtml(row.referencia)}</td>
         <td class="tablas">${escapeHtml(row.tablas_afectadas || "—")}</td>
         <td>${new Date(row.fecha_ejecucion).toLocaleString("es-AR")}</td>

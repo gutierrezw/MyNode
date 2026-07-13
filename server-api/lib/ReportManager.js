@@ -47,7 +47,9 @@ async function ultimo(pool, tipoReporte) {
         (max, r) => (!max || r.fecha_ejecucion > max ? r.fecha_ejecucion : max),
         null
     );
-    return parsed.map((r) => ({ ...r, no_reproducido: !!maxFecha && r.fecha_ejecucion < maxFecha }));
+    return parsed
+        .map((r) => ({ ...r, no_reproducido: !!maxFecha && r.fecha_ejecucion < maxFecha }))
+        .sort((a, b) => pesoRegistro(b.reporte) - pesoRegistro(a.reporte));
 }
 
 async function historico(pool, tipoReporte, referencia) {
@@ -82,6 +84,14 @@ async function marcarDescartado(pool, id, nota) {
          WHERE id = ?`,
         [nota || null, id]
     );
+}
+
+// Peso real de un hallazgo para ordenar por prioridad de atención: filas por ejecución
+// (evita que una query barata-pero-frecuente desplace a una realmente pesada), o el total/tamaño
+// de tabla si la categoría no trae ese detalle — no todas las categorías traen esta info.
+function pesoRegistro(reporte) {
+    if (typeof reporte !== "object" || reporte === null) return 0;
+    return reporte.filas_examinadas_prom ?? reporte.filas_examinadas ?? reporte.filas ?? 0;
 }
 
 function parseReporte(row) {

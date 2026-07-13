@@ -1,7 +1,7 @@
 const express = require("express");
 const pool = require("../db");
 const ReportManager = require("../lib/ReportManager");
-const { getSchemaHealth } = require("../lib/schemaHealth");
+const { getSchemaHealth, resetStats } = require("../lib/schemaHealth");
 const { renderPage } = require("../lib/reportPage");
 
 const router = express.Router();
@@ -110,6 +110,18 @@ router.post("/:tipo/:id/descartar", async (req, res) => {
     const { nota } = req.body || {};
     try {
         await ReportManager.marcarDescartado(pool, req.params.id, nota);
+        res.json({ ok: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// ── POST /schema_health/reset-stats — trunca performance_schema.events_statements_summary_by_digest
+//    para arrancar una medición limpia al validar un fix puntual. Afecta a TODAS las queries, no una
+//    sola — las pesadas-pero-poco-frecuentes no reaparecen en los reportes hasta que vuelvan a correr ──
+router.post("/schema_health/reset-stats", async (req, res) => {
+    try {
+        await resetStats(pool);
         res.json({ ok: true });
     } catch (e) {
         res.status(500).json({ error: e.message });
