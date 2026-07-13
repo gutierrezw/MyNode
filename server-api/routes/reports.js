@@ -18,6 +18,8 @@ function extraerTablas(sql) {
     return tablas.size ? [...tablas].join(",") : null;
 }
 
+const UMBRAL_BUFFER_POOL = 0.6; // solo reporta si el uso real supera el 60% del buffer pool configurado
+
 async function runSchemaHealth() {
     const health = await getSchemaHealth(pool);
 
@@ -33,7 +35,10 @@ async function runSchemaHealth() {
     for (const row of tablasGrandes) {
         await ReportManager.registrar(pool, "schema_health", "tabla_grande", row.tabla.slice(0, 64), row, row.tabla);
     }
-    await ReportManager.registrar(pool, "schema_health", "buffer_pool", "global", health.buffer_pool);
+    const { en_uso_gb, configurado_gb } = health.buffer_pool;
+    if (en_uso_gb !== null && configurado_gb > 0 && en_uso_gb / configurado_gb >= UMBRAL_BUFFER_POOL) {
+        await ReportManager.registrar(pool, "schema_health", "buffer_pool", "global", health.buffer_pool);
+    }
 
     return {
         full_scan: health.full_scans.length,
